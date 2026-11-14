@@ -88,19 +88,19 @@ The mobile app does not contain provider credentials. The Cloudflare Worker send
 
    ```bash
    npx wrangler login
-   npx wrangler secret put GROQ_API_KEY --config backend/wrangler.toml
+   npx wrangler secret put GROQ_API_KEY
    ```
 
 3. Deploy the proxy:
 
    ```bash
-   npx wrangler deploy --config backend/wrangler.toml
+   npx wrangler deploy
    ```
 
 4. Copy `.env.example` to `.env`, set `EXPO_PUBLIC_BIRD_IDENTIFICATION_API_URL` to the deployed worker URL ending in `/api/identify`, then restart Expo.
 5. Open **Identify bird**, take or select a photo, and tap **Identify this bird**.
 
-Keep `GROQ_API_KEY` in Cloudflare secrets only; never put it in `.env`, source control, or the mobile app. The `IDENTIFY_LIMITER` binding in `backend/wrangler.toml` is a Cloudflare rate-limit binding, not a secret.
+Keep `GROQ_API_KEY` in Cloudflare secrets only; never put it in `.env`, source control, or the mobile app. The `IDENTIFY_LIMITER` binding in the root `wrangler.toml` is a Cloudflare rate-limit binding, not a secret. The root config points to `backend/worker.ts`, so Cloudflare deploys the request-handling Worker rather than a static-assets-only project.
 
 ### Online bird search
 
@@ -118,8 +118,8 @@ FeatherFind/
 ├── scripts/
 │   └── download_birds.js      # Helper for downloading catalogue images
 ├── backend/
-│   ├── worker.ts              # Cloudflare proxy for Groq vision API
-│   └── wrangler.toml          # Cloudflare Worker configuration
+│   └── worker.ts              # Cloudflare proxy for Groq vision API
+├── wrangler.toml              # Cloudflare Worker entry point and bindings
 ├── src/
 │   ├── app/
 │   │   ├── _layout.tsx        # Root navigation layout and theme provider

@@ -1,6 +1,7 @@
 name = "featherfind"
-main = "worker.ts"
+main = "backend/worker.ts"
 compatibility_date = "2026-11-14"
+workers_dev = true
 
 [[ratelimits]]
 name = "IDENTIFY_LIMITER"
