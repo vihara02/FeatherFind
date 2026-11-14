@@ -1,24 +1,40 @@
 import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
 import { INITIAL_BIRDS_DATA } from '../data/birdsData';
-import { Bird, Sighting } from '../types';
 
-let dbInstance: SQLite.SQLiteDatabase | null = null;
+type DatabaseState = {
+  instance: SQLite.SQLiteDatabase | null;
+  promise: Promise<SQLite.SQLiteDatabase> | null;
+};
+
+const globalDatabase = globalThis as typeof globalThis & { __featherFindDatabase?: DatabaseState };
+const databaseState = (globalDatabase.__featherFindDatabase ??= { instance: null, promise: null });
 
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
-  if (dbInstance) {
-    return dbInstance;
+  if (databaseState.instance) {
+    return databaseState.instance;
   }
-  dbInstance = await SQLite.openDatabaseAsync('featherfind.db');
-  await initSchema(dbInstance);
-  return dbInstance;
+  if (!databaseState.promise) {
+    databaseState.promise = (async () => {
+      const db = await SQLite.openDatabaseAsync('featherfind.db');
+      await initSchema(db);
+      databaseState.instance = db;
+      return db;
+    })().catch((error: unknown) => {
+      databaseState.promise = null;
+      throw error;
+    });
+  }
+  return databaseState.promise;
 }
 
 async function initSchema(db: SQLite.SQLiteDatabase): Promise<void> {
+  if (Platform.OS !== 'web') {
+    await db.execAsync('PRAGMA journal_mode = WAL;');
+  }
+
   // Create tables
   await db.execAsync(`
-    PRAGMA journal_mode = WAL;
-
     CREATE TABLE IF NOT EXISTS birds (
       id TEXT PRIMARY KEY,
       common_name TEXT NOT NULL,

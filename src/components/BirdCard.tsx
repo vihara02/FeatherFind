@@ -80,7 +80,10 @@ export const BirdCard: React.FC<BirdCardProps> = ({
           {onFavoriteToggle && (
             <Pressable
               hitSlop={8}
-              onPress={onFavoriteToggle}
+              onPress={(event) => {
+                event.stopPropagation();
+                onFavoriteToggle();
+              }}
               style={[
                 styles.favButton,
                 { backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.85)' },

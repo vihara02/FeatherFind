@@ -23,12 +23,20 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const systemScheme = useColorScheme();
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('light');
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
 
   useEffect(() => {
-    getUserPreferences().then(prefs => {
-      setThemeModeState(prefs.theme || 'light');
-    });
+    let active = true;
+    getUserPreferences()
+      .then(prefs => {
+        if (active) setThemeModeState(prefs.theme || 'system');
+      })
+      .catch(error => {
+        console.error('Error loading theme preference:', error);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const effectiveTheme: 'light' | 'dark' =
@@ -37,8 +45,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const colors = effectiveTheme === 'dark' ? Colors.dark : Colors.light;
 
   const setThemeMode = async (mode: ThemeMode) => {
+    const previousMode = themeMode;
     setThemeModeState(mode);
-    await saveUserPreferences({ theme: mode });
+    try {
+      await saveUserPreferences({ theme: mode });
+    } catch (error) {
+      setThemeModeState(previousMode);
+      throw error;
+    }
   };
 
   return (
