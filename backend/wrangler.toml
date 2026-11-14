@@ -1,0 +1,11 @@
+name = "featherfind-bird-identification"
+main = "worker.ts"
+compatibility_date = "2026-11-14"
+
+[[ratelimits]]
+name = "IDENTIFY_LIMITER"
+namespace_id = "2026111401"
+
+  [ratelimits.simple]
+  limit = 10
+  period = 60

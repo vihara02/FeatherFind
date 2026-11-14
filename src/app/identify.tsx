@@ -12,7 +12,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
-import { identifyBirdPhoto } from '../services/aiIdentification';
+import { identifyBirdPhoto } from '../services/birdIdentification';
 import { pickBirdFromGallery, takeBirdPhoto, PickedImageResult } from '../services/imageService';
 import { AIIdentificationResult } from '../types';
 
@@ -75,7 +75,7 @@ export default function IdentifyScreen() {
           </View>
           <Text style={[styles.title, { color: colors.textInverse }]}>Who’s that bird?</Text>
           <Text style={[styles.subtitle, { color: colors.textInverse }]}>
-            Take or choose a clear photo. Gemini will suggest a species and explain what to look for.
+            Take or choose a clear photo. iNaturalist will suggest likely bird species.
           </Text>
         </View>
 

@@ -14,15 +14,17 @@ Built with Expo and React Native, FeatherFind is designed for quick use outdoors
 - **Browse by group** — Filter the guide to endemic species or species of conservation concern.
 - **Learn about each bird** — Read identification clues, habitat and range information, diet, behavior, and interesting facts.
 - **Search more bird species online** — Home and Explore search the public iNaturalist taxonomy API and link to species details.
-- **Identify a bird from a photo** — Take a picture or choose one from your gallery to get AI-generated identification suggestions and helpful visual clues.
+- **Meet the bird of the day** — Discover a different catalogue species each day and open its details with one tap.
+- **Identify a bird from a photo** — Take a picture or choose one from your gallery to get free iNaturalist computer-vision suggestions, matched with the local bird guide when possible.
 - **Record sightings** — Save the bird, date and time, location, number seen, notes, and an optional photo.
 - **Use GPS in the field** — Add your current location to a sighting when location permission is available.
 - **Keep a personal checklist** — Mark the species you have spotted and track your progress.
 - **Save favorite birds** — Keep interesting species close at hand.
-- **Make it yours** — Switch between light and dark appearance and configure your Gemini API key in Profile.
+- **Make it yours** — Switch between light and dark appearance.
 - **Keep your field records on-device** — Sightings, favorites, and checklist data are stored locally with SQLite.
 
-> **Online bird search** uses iNaturalist's public taxonomy API and does not need an API key. Photo identification remains a separate Gemini-powered feature configured in Profile.
+> **Photo identification:** An internet connection and a deployed backend are required. The selected photo is sent to iNaturalist for computer-vision identification. No Gemini key or other provider key is stored in the mobile app.
+> **Online bird search** uses iNaturalist's public taxonomy API and does not need an API key.
 
 ---
 
@@ -35,11 +37,11 @@ Built with Expo and React Native, FeatherFind is designed for quick use outdoors
 | [Expo Router](https://docs.expo.dev/versions/v58.0.0/sdk/router/) | File-based navigation between app screens |
 | [TypeScript](https://www.typescriptlang.org/) | Typed application code |
 | [Expo SQLite](https://docs.expo.dev/versions/v58.0.0/sdk/sqlite/) | Local bird catalogue, sightings, favorites, and checklist |
-| [AsyncStorage](https://react-native-async-storage.github.io/async-storage/) | Local preferences, including the Gemini API key |
+| [AsyncStorage](https://react-native-async-storage.github.io/async-storage/) | Local app preferences |
 | [Expo Image Picker](https://docs.expo.dev/versions/v58.0.0/sdk/imagepicker/) | Camera capture and gallery selection |
 | [Expo Location](https://docs.expo.dev/versions/v58.0.0/sdk/location/) | Optional GPS location for sightings |
-| [Google Gemini API](https://ai.google.dev/gemini-api/docs) | AI-assisted bird photo identification |
-| [iNaturalist API](https://api.inaturalist.org/v1/docs/) | Free public bird taxonomy search |
+| [iNaturalist API](https://api.inaturalist.org/v1/docs/) | Free bird photo identification |
+| [Cloudflare Workers](https://developers.cloudflare.com/workers/) | Secure proxy for iNaturalist authentication |
 
 ---
 
@@ -49,8 +51,8 @@ Built with Expo and React Native, FeatherFind is designed for quick use outdoors
 
 - [Node.js](https://nodejs.org/) and npm
 - A phone with [Expo Go](https://expo.dev/go) for quick device testing, or an Android/iOS development environment
-- An optional Gemini API key for photo identification
 - An internet connection for online bird search
+- A free iNaturalist OAuth app and a Cloudflare account to enable photo identification
 
 ### Install and start
 
@@ -76,14 +78,28 @@ npx expo start --web
 
 Camera, gallery, and GPS behavior should be tested on a device with the required permissions enabled. The iOS simulator does not have a physical camera.
 
-### Set up AI identification
+### Set up free bird photo identification
 
-1. Create an API key in [Google AI Studio](https://aistudio.google.com/app/apikey).
-2. Open FeatherFind and tap the **Profile** icon.
-3. Paste the key into **Gemini API key** and save.
-4. Open **Identify bird**, take or select a photo, and tap **Identify this bird**.
+The mobile app does not contain provider credentials. A Cloudflare Worker keeps the iNaturalist OAuth token server-side, requests a short-lived iNaturalist API token when a photo is submitted, and rate-limits requests to 10 per minute per client IP.
 
-The app stores the key in local device preferences. Do not commit API keys to this repository.
+1. Register an OAuth application with [iNaturalist](https://www.inaturalist.org/oauth/applications/new) and complete its user authorization flow to obtain an OAuth access token. See the [iNaturalist API authentication guide](https://www.inaturalist.org/pages/api+reference#auth).
+2. Log in to Cloudflare with Wrangler and store the OAuth access token as a server secret:
+
+   ```bash
+   npx wrangler login
+   npx wrangler secret put INAT_OAUTH_ACCESS_TOKEN --config backend/wrangler.toml
+   ```
+
+3. Deploy the proxy:
+
+   ```bash
+   npx wrangler deploy --config backend/wrangler.toml
+   ```
+
+4. Copy `.env.example` to `.env`, set `EXPO_PUBLIC_BIRD_IDENTIFICATION_API_URL` to the deployed worker URL ending in `/api/identify`, then restart Expo.
+5. Open **Identify bird**, take or select a photo, and tap **Identify this bird**.
+
+Keep OAuth credentials and access tokens in Cloudflare secrets only; never put them in `.env`, source control, or the mobile app. The OAuth access token can expire and may need to be renewed in Cloudflare. iNaturalist may throttle API requests under its published usage limits.
 
 ### Online bird search
 
@@ -100,6 +116,9 @@ FeatherFind/
 │   └── ...                    # App icons and splash assets
 ├── scripts/
 │   └── download_birds.js      # Helper for downloading catalogue images
+├── backend/
+│   ├── worker.ts              # Cloudflare proxy for iNaturalist authentication
+│   └── wrangler.toml          # Cloudflare Worker configuration
 ├── src/
 │   ├── app/
 │   │   ├── _layout.tsx        # Root navigation layout and theme provider
@@ -111,7 +130,7 @@ FeatherFind/
 │   ├── context/                # Theme, preferences, and database contexts
 │   ├── data/                   # Bird catalogue and image mappings
 │   ├── db/                     # SQLite schema and data repositories
-│   ├── services/               # AI, camera, location, and storage services
+│   ├── services/               # Bird identification, camera, location, and storage
 │   └── types/                  # Shared TypeScript types
 ├── app.json                    # Expo app configuration
 ├── package.json                # Dependencies and run scripts
@@ -133,9 +152,9 @@ The bundled catalogue is in [`src/data/birdsData.ts`](src/data/birdsData.ts). Bi
 - Birding records and app preferences are stored locally on the device.
 - Camera and photo-library access are requested when you use photo features.
 - Location access is optional and used to add GPS coordinates to a sighting.
-- Photo identification sends the selected image and prompt to Google Gemini. Review Google’s privacy terms and API settings before using the feature.
-- The Gemini API key is stored in local app preferences. A key embedded in a client app should be treated as recoverable; use API restrictions and a secure server-side proxy for production deployments.
 - Bird searches send the search text to iNaturalist. Review [iNaturalist’s terms](https://www.inaturalist.org/terms) and [privacy policy](https://www.inaturalist.org/privacy).
+- Photo identification sends the selected image to iNaturalist through the configured Cloudflare Worker. Review [iNaturalist’s terms](https://www.inaturalist.org/terms) and [privacy policy](https://www.inaturalist.org/privacy).
+- The iNaturalist OAuth access token is stored as a Cloudflare secret, not in the mobile app. Older locally saved Gemini keys are removed from preferences the next time they are read.
 
 ---
 

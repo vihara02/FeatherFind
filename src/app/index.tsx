@@ -7,6 +7,7 @@ import {
   Modal,
   Platform,
   ScrollView,
+  Share,
   StatusBar,
   StyleSheet,
   Text,
@@ -30,7 +31,6 @@ import { Bird, BirdStats } from '../types';
 import { useBirdSearch } from '../hooks/useBirdSearch';
 import { getCurrentGPSLocation } from '../services/locationService';
 import { takeBirdPhoto } from '../services/imageService';
-import { getUserPreferences, saveUserPreferences } from '../services/storageService';
 
 const quickActions = [
   { label: 'Explore', icon: 'binoculars', color: '#1F6B52' },
@@ -48,6 +48,14 @@ function localDateTime() {
     date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
     time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
   };
+}
+
+function getBirdOfTheDay(date = new Date()): Bird | null {
+  const birdCount = INITIAL_BIRDS_DATA.length;
+  if (birdCount === 0) return null;
+  const dayNumber = Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000);
+  const index = ((dayNumber % birdCount) + birdCount) % birdCount;
+  return INITIAL_BIRDS_DATA[index];
 }
 
 function FeatherFindHome() {
@@ -71,9 +79,8 @@ function FeatherFindHome() {
   const [loadingChecklist, setLoadingChecklist] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [loadingPhoto, setLoadingPhoto] = useState(false);
-  const [geminiApiKey, setGeminiApiKey] = useState('');
-  const [savingGeminiApiKey, setSavingGeminiApiKey] = useState(false);
   const onlineSearch = useBirdSearch(query);
+  const birdOfTheDay = getBirdOfTheDay();
 
   const loadDatabaseData = useCallback(
     () => Promise.all([getBirdStats(), getFavoriteBirds()] as const),
@@ -133,6 +140,20 @@ function FeatherFindHome() {
     Alert.alert(title, 'Please try again.');
   };
 
+  const handleShareBird = async (bird: Bird) => {
+    try {
+      await Share.share(
+        {
+          title: bird.commonName,
+          message: `${bird.commonName} (${bird.scientificName})\n\n${bird.description}\n\nHabitat: ${bird.habitat}`,
+        },
+        { dialogTitle: `Share ${bird.commonName}` }
+      );
+    } catch (error) {
+      showError('Could not share bird details', error);
+    }
+  };
+
   const openSightingForm = (bird?: Bird) => {
     setSightingBird(bird ?? null);
     setBirdPickerQuery('');
@@ -167,28 +188,6 @@ function FeatherFindHome() {
         .catch((error: unknown) => showError('Could not load checklist', error))
         .finally(() => setLoadingChecklist(false));
       return;
-    }
-  };
-
-  const openProfile = async () => {
-    try {
-      const preferences = await getUserPreferences();
-      setGeminiApiKey(preferences.geminiApiKey ?? '');
-      setActiveModal('profile');
-    } catch (error) {
-      showError('Could not open profile settings', error);
-    }
-  };
-
-  const handleSaveGeminiApiKey = async () => {
-    setSavingGeminiApiKey(true);
-    try {
-      await saveUserPreferences({ geminiApiKey: geminiApiKey.trim() });
-      Alert.alert('Settings saved', geminiApiKey.trim() ? 'Gemini is ready to identify bird photos.' : 'Gemini API key removed.');
-    } catch (error) {
-      showError('Could not save Gemini settings', error);
-    } finally {
-      setSavingGeminiApiKey(false);
     }
   };
 
@@ -329,7 +328,7 @@ function FeatherFindHome() {
               accessibilityRole="button"
               accessibilityLabel="Open profile settings"
               style={[styles.themeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => void openProfile()}
+              onPress={() => setActiveModal('profile')}
               activeOpacity={0.75}
             >
               <MaterialCommunityIcons name="account-outline" size={20} color={colors.primary} />
@@ -385,6 +384,71 @@ function FeatherFindHome() {
             </View>
           </View>
         </ImageBackground>
+
+        {birdOfTheDay && (
+          <View style={[styles.dailyBirdCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`Bird of the day: ${birdOfTheDay.commonName}. View details.`}
+              style={styles.dailyBirdMain}
+              onPress={() => setSelectedBird(birdOfTheDay)}
+              activeOpacity={0.82}
+            >
+              <Image
+                source={BIRD_LOCAL_IMAGES[birdOfTheDay.localImageKey] ?? { uri: birdOfTheDay.imageUrl }}
+                style={styles.dailyBirdImage}
+                resizeMode="cover"
+              />
+              <View style={styles.dailyBirdContent}>
+                <Text style={[styles.dailyBirdEyebrow, { color: colors.primary }]}>BIRD OF THE DAY</Text>
+                <Text style={[styles.dailyBirdName, { color: colors.text }]} numberOfLines={1}>
+                  {birdOfTheDay.commonName}
+                </Text>
+                <Text style={[styles.dailyBirdScientific, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {birdOfTheDay.scientificName}
+                </Text>
+                {birdOfTheDay.isEndemic && (
+                  <View style={[styles.dailyBirdTag, { backgroundColor: colors.sageSubtle }]}>
+                    <MaterialCommunityIcons name="leaf" size={12} color={colors.primary} />
+                    <Text style={[styles.dailyBirdTagText, { color: colors.primary }]}>Sri Lankan endemic</Text>
+                  </View>
+                )}
+                <View style={styles.dailyBirdHabitat}>
+                  <MaterialCommunityIcons name="tree-outline" size={13} color={colors.sage} />
+                  <Text style={[styles.dailyBirdHabitatText, { color: colors.textSecondary }]}>
+                    {birdOfTheDay.habitatCategory[0].toUpperCase() + birdOfTheDay.habitatCategory.slice(1)} habitat
+                  </Text>
+                </View>
+                <Text style={[styles.dailyBirdFact, { color: colors.textSecondary }]} numberOfLines={2}>
+                  {birdOfTheDay.interestingFacts[0] ?? birdOfTheDay.description}
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`${favorites[birdOfTheDay.id] ? 'Remove' : 'Add'} ${birdOfTheDay.commonName} ${favorites[birdOfTheDay.id] ? 'from' : 'to'} favorites`}
+              style={styles.dailyBirdFavorite}
+              onPress={() => void handleToggleFavorite(birdOfTheDay.id)}
+              hitSlop={8}
+            >
+              <MaterialCommunityIcons
+                name={favorites[birdOfTheDay.id] ? 'heart' : 'heart-outline'}
+                size={21}
+                color={favorites[birdOfTheDay.id] ? '#D93838' : colors.textSecondary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`Log a ${birdOfTheDay.commonName} sighting`}
+              style={styles.dailyBirdFavorite}
+              onPress={() => openSightingForm(birdOfTheDay)}
+              hitSlop={8}
+            >
+              <MaterialCommunityIcons name="camera-plus-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.statsRow}>
           {[
@@ -474,6 +538,14 @@ function FeatherFindHome() {
             <View style={[styles.detailSheet, { backgroundColor: colors.background }]}>
               <View style={styles.modalHeader}>
                 <Text style={[styles.modalTitle, { color: colors.text }]} numberOfLines={1}>{selectedBird.commonName}</Text>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={`Share ${selectedBird.commonName}`}
+                  onPress={() => void handleShareBird(selectedBird)}
+                  hitSlop={8}
+                >
+                  <MaterialCommunityIcons name="share-variant-outline" size={22} color={colors.primary} />
+                </TouchableOpacity>
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close bird details" onPress={() => setSelectedBird(null)} hitSlop={8}>
                   <MaterialCommunityIcons name="close" size={24} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -676,29 +748,6 @@ function FeatherFindHome() {
                 Your appearance preference is saved and used next time you open the app.
               </Text>
 
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Gemini API key</Text>
-              <TextInput
-                style={[styles.input, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
-                value={geminiApiKey}
-                onChangeText={setGeminiApiKey}
-                placeholder="Paste your Gemini API key"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                secureTextEntry
-              />
-              <Text style={[styles.helperText, styles.apiKeyHint, { color: colors.textSecondary }]}>
-                Bird photos are sent to Google Gemini for identification. The key is stored on this device; restrict it in Google AI Studio and don’t use a production billing key here.
-              </Text>
-              <TouchableOpacity
-                style={[styles.primaryButton, styles.saveButton, { backgroundColor: colors.primary, opacity: savingGeminiApiKey ? 0.65 : 1 }]}
-                onPress={() => void handleSaveGeminiApiKey()}
-                disabled={savingGeminiApiKey}
-              >
-                <Text style={[styles.primaryButtonText, { color: colors.textInverse }]}>
-                  {savingGeminiApiKey ? 'Saving…' : 'Save AI settings'}
-                </Text>
-              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
@@ -752,6 +801,19 @@ const styles = StyleSheet.create({
   featurePrimary: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 13, backgroundColor: '#F5D99A', paddingHorizontal: 13 },
   featurePrimaryText: { color: '#183D2A', fontSize: 13, fontWeight: '800' },
   featureCamera: { width: 40, height: 40, borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)', borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.14)' },
+  dailyBirdCard: { minHeight: 112, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 18, padding: 12, marginBottom: 18 },
+  dailyBirdMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dailyBirdFavorite: { width: 36, height: 40, alignItems: 'center', justifyContent: 'center' },
+  dailyBirdImage: { width: 84, height: 84, borderRadius: 13, backgroundColor: '#E6ECE8' },
+  dailyBirdContent: { flex: 1 },
+  dailyBirdEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 0.9, marginBottom: 4 },
+  dailyBirdName: { fontSize: 15, fontWeight: '800' },
+  dailyBirdScientific: { fontSize: 12, fontStyle: 'italic', marginTop: 1, marginBottom: 4 },
+  dailyBirdTag: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, marginBottom: 4 },
+  dailyBirdTagText: { fontSize: 10, fontWeight: '700' },
+  dailyBirdHabitat: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 },
+  dailyBirdHabitatText: { fontSize: 10, fontWeight: '600' },
+  dailyBirdFact: { fontSize: 12, lineHeight: 17 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 18, gap: 8 },
   statCard: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 5, alignItems: 'center' },
   statValue: { fontSize: 21, fontWeight: '800', marginBottom: 2 },
@@ -800,7 +862,6 @@ const styles = StyleSheet.create({
   checklistText: { flex: 1, gap: 2 },
   profileCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
   profileInfo: { flex: 1, gap: 4 },
-  apiKeyHint: { marginTop: 8 },
   profileStats: { flexDirection: 'row', justifyContent: 'space-around', padding: 14, borderRadius: 14, borderWidth: 1, marginTop: 12, marginBottom: 8 },
   profileStat: { alignItems: 'center', gap: 3 },
   profileStatValue: { fontSize: 20, fontWeight: '800' },

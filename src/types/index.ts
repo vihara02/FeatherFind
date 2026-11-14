@@ -95,7 +95,6 @@ export interface UserPreferences {
   theme: 'system' | 'light' | 'dark';
   language: 'en' | 'si' | 'ta';
   notificationsEnabled: boolean;
-  geminiApiKey?: string;
   autoGpsEnabled: boolean;
 }
 
