@@ -420,6 +420,15 @@ function FeatherFindHome() {
                 color={favorites[birdOfTheDay.id] ? '#D93838' : colors.textSecondary}
               />
             </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`Log a ${birdOfTheDay.commonName} sighting`}
+              style={styles.dailyBirdFavorite}
+              onPress={() => openSightingForm(birdOfTheDay)}
+              hitSlop={8}
+            >
+              <MaterialCommunityIcons name="camera-plus-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
           </View>
         )}
 
