@@ -13,12 +13,14 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { BirdCard } from '../components/BirdCard';
+import { BirdSearchSuggestions } from '../components/BirdSearchSuggestions';
 import { SearchBar } from '../components/SearchBar';
 import { useTheme } from '../context/ThemeContext';
 import { INITIAL_BIRDS_DATA } from '../data/birdsData';
 import { BIRD_LOCAL_IMAGES } from '../data/birdImages';
 import { getFavoriteBirds, toggleFavorite } from '../db/birdsRepo';
 import { Bird } from '../types';
+import { useBirdSearch } from '../hooks/useBirdSearch';
 
 type CatalogFilter = 'all' | 'endemic' | 'atRisk';
 
@@ -34,6 +36,7 @@ export default function ExploreScreen() {
   const [filter, setFilter] = useState<CatalogFilter>('all');
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
   const [selectedBird, setSelectedBird] = useState<Bird | null>(null);
+  const onlineSearch = useBirdSearch(query);
 
   useEffect(() => {
     let active = true;
@@ -129,7 +132,7 @@ export default function ExploreScreen() {
       </View>
 
       <Text style={[styles.resultCount, { color: colors.textMuted }]}>
-        {visibleBirds.length} {visibleBirds.length === 1 ? 'species' : 'species'}
+        {visibleBirds.length} local {visibleBirds.length === 1 ? 'species' : 'species'}
       </Text>
       <FlatList
         data={visibleBirds}
@@ -152,8 +155,22 @@ export default function ExploreScreen() {
           <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <MaterialCommunityIcons name="binoculars" size={32} color={colors.sage} />
             <Text style={[styles.emptyTitle, { color: colors.text }]}>No birds found</Text>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Try another search or choose a different group.</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              {query.trim().length >= 2
+                ? 'No matching species in the local guide. Check the online results below.'
+                : 'Try another search or choose a different group.'}
+            </Text>
           </View>
+        }
+        ListFooterComponent={
+          <BirdSearchSuggestions
+            query={query}
+            suggestions={onlineSearch.suggestions}
+            localBirds={INITIAL_BIRDS_DATA}
+            loading={onlineSearch.loading}
+            error={onlineSearch.error}
+            onRetry={onlineSearch.retry}
+          />
         }
       />
 
