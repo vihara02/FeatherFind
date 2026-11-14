@@ -3,6 +3,7 @@ import { getAllBirds } from '../db/birdsRepo';
 import { getUserPreferences } from './storageService';
 
 const GEMINI_MODEL = 'gemini-3.8-flash';
+const MAX_RETRIES = 3;
 
 export async function identifyBirdPhoto(
   photoUri: string,
@@ -66,42 +67,58 @@ Respond only with a valid JSON array using this format:
       },
     ],
     generationConfig: {
-      temperature: 0.2,
       responseMimeType: 'application/json',
     },
   };
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
-  let response: Response;
-  try {
-    response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
+  let response: Response | undefined;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+    try {
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        }
+      );
+    } catch {
+      if (attempt === MAX_RETRIES) {
+        if (controller.signal.aborted) {
+          throw new Error('Bird identification timed out. Check your connection and try again.');
+        }
+        throw new Error('Could not connect to Gemini. Check your internet connection and try again.');
       }
-    );
-  } catch {
-    if (controller.signal.aborted) {
-      throw new Error('Bird identification timed out. Check your connection and try again.');
+      await waitForRetry(attempt);
+      continue;
+    } finally {
+      clearTimeout(timeout);
     }
-    throw new Error('Could not connect to Gemini. Check your internet connection and try again.');
-  } finally {
-    clearTimeout(timeout);
+
+    if (response.ok || !isRetryableStatus(response.status) || attempt === MAX_RETRIES) {
+      break;
+    }
+    await waitForRetry(attempt, response.headers.get('Retry-After'));
   }
 
+  if (!response) {
+    throw new Error('Could not connect to Gemini. Check your internet connection and try again.');
+  }
   if (!response.ok) {
     if (response.status === 400 || response.status === 403) {
       throw new Error('Gemini rejected the API key or request. Check your key in Profile settings.');
     }
     if (response.status === 429) {
       throw new Error('Gemini is busy or the API quota has been reached. Please try again later.');
+    }
+    if (response.status === 503 || response.status >= 500) {
+      throw new Error(`Gemini is temporarily unavailable (error ${response.status}). The app retried automatically; please wait a minute and try again.`);
     }
     throw new Error(`Gemini could not identify this photo (error ${response.status}). Please try again.`);
   }
@@ -152,6 +169,18 @@ Respond only with a valid JSON array using this format:
     throw new Error('No bird could be identified. Try a close, well-lit photo with the bird in focus.');
   }
   return matches;
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+async function waitForRetry(attempt: number, retryAfter: string | null = null): Promise<void> {
+  const retryAfterSeconds = retryAfter ? Number(retryAfter) : NaN;
+  const delayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+    ? Math.min(retryAfterSeconds * 1000, 10_000)
+    : 1000 * (2 ** attempt) + Math.floor(Math.random() * 250);
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
 interface GeminiResponse {
