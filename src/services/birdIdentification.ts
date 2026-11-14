@@ -11,7 +11,7 @@ export async function identifyBirdPhoto(
     throw new Error('The photo could not be read. Please take another photo or choose one from your gallery.');
   }
   if (!IDENTIFICATION_API_URL) {
-    throw new Error('Bird identification is not configured. Set up the free iNaturalist connection and try again.');
+    throw new Error('Bird identification is not configured. Set up the identification service and try again.');
   }
 
   let response: Response;
@@ -35,7 +35,7 @@ export async function identifyBirdPhoto(
 
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
-      throw new Error('The iNaturalist connection needs attention. Please contact the app administrator.');
+      throw new Error('The bird identification service needs attention. Please contact the app administrator.');
     }
     if (response.status === 429) {
       throw new Error('The free identification service is busy. Please wait a moment and try again.');
@@ -43,9 +43,9 @@ export async function identifyBirdPhoto(
     throw new Error(`Bird identification failed (error ${response.status}). Please try again.`);
   }
 
-  let data: INaturalistVisionResponse;
+  let data: BirdIdentificationResponse;
   try {
-    data = await response.json() as INaturalistVisionResponse;
+    data = await response.json() as BirdIdentificationResponse;
   } catch {
     throw new Error('The bird identification service returned an invalid response. Please try again.');
   }
@@ -75,7 +75,7 @@ export async function identifyBirdPhoto(
         scientificName,
         confidence,
         matchingBird,
-        description: matchingBird?.description ?? 'Suggested by iNaturalist computer vision. Check the visible features before confirming.',
+        description: matchingBird?.description ?? 'Suggested by a vision model. Check the visible features before confirming.',
         identifyingCharacteristics: matchingBird?.identificationCharacteristics ?? [],
         habitatInfo: matchingBird?.habitat ?? '',
         similarSpecies: matchingBird?.similarSpecies ?? [],
@@ -84,7 +84,7 @@ export async function identifyBirdPhoto(
     });
 
   if (matches.length === 0) {
-    throw new Error('iNaturalist could not identify a bird in this photo. Try a clear, close-up image with one bird in focus.');
+    throw new Error('The service could not identify a bird in this photo. Try a clear, close-up image with one bird in focus.');
   }
 
   return {
@@ -95,7 +95,7 @@ export async function identifyBirdPhoto(
   };
 }
 
-interface INaturalistVisionResponse {
+interface BirdIdentificationResponse {
   results?: unknown[];
 }
 
