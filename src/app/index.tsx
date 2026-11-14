@@ -7,6 +7,7 @@ import {
   Modal,
   Platform,
   ScrollView,
+  Share,
   StatusBar,
   StyleSheet,
   Text,
@@ -134,6 +135,20 @@ function FeatherFindHome() {
   const showError = (title: string, error: unknown) => {
     console.error(`${title}:`, error);
     Alert.alert(title, 'Please try again.');
+  };
+
+  const handleShareBird = async (bird: Bird) => {
+    try {
+      await Share.share(
+        {
+          title: bird.commonName,
+          message: `${bird.commonName} (${bird.scientificName})\n\n${bird.description}\n\nHabitat: ${bird.habitat}`,
+        },
+        { dialogTitle: `Share ${bird.commonName}` }
+      );
+    } catch (error) {
+      showError('Could not share bird details', error);
+    }
   };
 
   const openSightingForm = (bird?: Bird) => {
@@ -510,6 +525,14 @@ function FeatherFindHome() {
             <View style={[styles.detailSheet, { backgroundColor: colors.background }]}>
               <View style={styles.modalHeader}>
                 <Text style={[styles.modalTitle, { color: colors.text }]} numberOfLines={1}>{selectedBird.commonName}</Text>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={`Share ${selectedBird.commonName}`}
+                  onPress={() => void handleShareBird(selectedBird)}
+                  hitSlop={8}
+                >
+                  <MaterialCommunityIcons name="share-variant-outline" size={22} color={colors.primary} />
+                </TouchableOpacity>
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close bird details" onPress={() => setSelectedBird(null)} hitSlop={8}>
                   <MaterialCommunityIcons name="close" size={24} color={colors.textSecondary} />
                 </TouchableOpacity>
