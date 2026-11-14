@@ -31,6 +31,19 @@ Captured in a mobile viewport:
   <img src="./screenshots/home.png" alt="FeatherFind home screen on mobile" width="250" />
   <img src="./screenshots/explore.png" alt="FeatherFind Explore screen on mobile" width="250" />
   <img src="./screenshots/identify.png" alt="FeatherFind bird identification screen on mobile" width="250" />
+  <img src="./screenshots/1.png" alt="Bird identification result suggesting a Pheasant-tailed Jacana" width="250" />
+  <img src="./screenshots/2.png" alt="Sri Lanka Junglefowl species details and sighting actions" width="250" />
+  <img src="./screenshots/3.png" alt="Form for recording a bird sighting" width="250" />
+  <img src="./screenshots/4.png" alt="Bird checklist showing spotted species" width="250" />
+  <img src="./screenshots/5.png" alt="Bird identification screen ready for a photo" width="250" />
+  <img src="./screenshots/6.png" alt="Sri Lanka Green Pigeon species details" width="250" />
+  <img src="./screenshots/7.png" alt="Explore birds filtered to species at risk" width="250" />
+  <img src="./screenshots/8.png" alt="Explore screen showing the bird catalogue" width="250" />
+  <img src="./screenshots/9.png" alt="Field profile with appearance settings" width="250" />
+  <img src="./screenshots/10.png" alt="FeatherFind home screen in dark mode" width="250" />
+  <img src="./screenshots/11.png" alt="FeatherFind home screen in light mode" width="250" />
+  <img src="./screenshots/12.png" alt="Bird identification result suggesting a European Goldfinch" width="250" />
+
 </p>
 
 > **Photo identification:** An internet connection and a deployed backend are required. The selected photo is sent to Groq's vision API through the Cloudflare Worker. The Groq API key is stored only as a Cloudflare secret, never in the app.
@@ -172,3 +185,11 @@ The bundled catalogue is in [`src/data/birdsData.ts`](src/data/birdsData.ts). Bi
 ## 📄 License
 
 See [`LICENSE`](LICENSE) for project licensing information.
+
+---
+
+## Created by
+
+**A. Vihara Dewmini**
+
+**Registration No:** 2022/ICT/09
