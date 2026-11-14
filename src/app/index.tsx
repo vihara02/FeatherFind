@@ -28,7 +28,6 @@ import { addSighting, getBirdStats } from '../db/sightingsRepo';
 import { Bird, BirdStats } from '../types';
 import { getCurrentGPSLocation } from '../services/locationService';
 import { takeBirdPhoto } from '../services/imageService';
-import { getUserPreferences, saveUserPreferences } from '../services/storageService';
 
 const quickActions = [
   { label: 'Explore', icon: 'binoculars', color: '#1F6B52' },
@@ -69,8 +68,6 @@ function FeatherFindHome() {
   const [loadingChecklist, setLoadingChecklist] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [loadingPhoto, setLoadingPhoto] = useState(false);
-  const [geminiApiKey, setGeminiApiKey] = useState('');
-  const [savingGeminiApiKey, setSavingGeminiApiKey] = useState(false);
 
   const loadDatabaseData = useCallback(
     () => Promise.all([getBirdStats(), getFavoriteBirds()] as const),
@@ -164,28 +161,6 @@ function FeatherFindHome() {
         .catch((error: unknown) => showError('Could not load checklist', error))
         .finally(() => setLoadingChecklist(false));
       return;
-    }
-  };
-
-  const openProfile = async () => {
-    try {
-      const preferences = await getUserPreferences();
-      setGeminiApiKey(preferences.geminiApiKey ?? '');
-      setActiveModal('profile');
-    } catch (error) {
-      showError('Could not open profile settings', error);
-    }
-  };
-
-  const handleSaveGeminiApiKey = async () => {
-    setSavingGeminiApiKey(true);
-    try {
-      await saveUserPreferences({ geminiApiKey: geminiApiKey.trim() });
-      Alert.alert('Settings saved', geminiApiKey.trim() ? 'Gemini is ready to identify bird photos.' : 'Gemini API key removed.');
-    } catch (error) {
-      showError('Could not save Gemini settings', error);
-    } finally {
-      setSavingGeminiApiKey(false);
     }
   };
 
@@ -326,7 +301,7 @@ function FeatherFindHome() {
               accessibilityRole="button"
               accessibilityLabel="Open profile settings"
               style={[styles.themeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => void openProfile()}
+              onPress={() => setActiveModal('profile')}
               activeOpacity={0.75}
             >
               <MaterialCommunityIcons name="account-outline" size={20} color={colors.primary} />
@@ -663,29 +638,6 @@ function FeatherFindHome() {
                 Your appearance preference is saved and used next time you open the app.
               </Text>
 
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Gemini API key</Text>
-              <TextInput
-                style={[styles.input, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
-                value={geminiApiKey}
-                onChangeText={setGeminiApiKey}
-                placeholder="Paste your Gemini API key"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                secureTextEntry
-              />
-              <Text style={[styles.helperText, styles.apiKeyHint, { color: colors.textSecondary }]}>
-                Bird photos are sent to Google Gemini for identification. The key is stored on this device; restrict it in Google AI Studio and don’t use a production billing key here.
-              </Text>
-              <TouchableOpacity
-                style={[styles.primaryButton, styles.saveButton, { backgroundColor: colors.primary, opacity: savingGeminiApiKey ? 0.65 : 1 }]}
-                onPress={() => void handleSaveGeminiApiKey()}
-                disabled={savingGeminiApiKey}
-              >
-                <Text style={[styles.primaryButtonText, { color: colors.textInverse }]}>
-                  {savingGeminiApiKey ? 'Saving…' : 'Save AI settings'}
-                </Text>
-              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
@@ -787,7 +739,6 @@ const styles = StyleSheet.create({
   checklistText: { flex: 1, gap: 2 },
   profileCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
   profileInfo: { flex: 1, gap: 4 },
-  apiKeyHint: { marginTop: 8 },
   profileStats: { flexDirection: 'row', justifyContent: 'space-around', padding: 14, borderRadius: 14, borderWidth: 1, marginTop: 12, marginBottom: 8 },
   profileStat: { alignItems: 'center', gap: 3 },
   profileStatValue: { fontSize: 20, fontWeight: '800' },

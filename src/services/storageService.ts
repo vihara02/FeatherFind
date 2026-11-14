@@ -17,7 +17,16 @@ export async function getUserPreferences(): Promise<UserPreferences> {
   try {
     const raw = await AsyncStorage.getItem(PREFS_KEY);
     if (!raw) return DEFAULT_PREFERENCES;
-    return { ...DEFAULT_PREFERENCES, ...JSON.parse(raw) };
+    const stored = JSON.parse(raw) as Partial<UserPreferences> & { geminiApiKey?: string };
+    if (Object.prototype.hasOwnProperty.call(stored, 'geminiApiKey')) {
+      delete stored.geminiApiKey;
+      try {
+        await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(stored));
+      } catch (error) {
+        console.error('Unable to remove the old Gemini API key from preferences:', error);
+      }
+    }
+    return { ...DEFAULT_PREFERENCES, ...stored };
   } catch (error) {
     console.error('Error reading user preferences:', error);
     return DEFAULT_PREFERENCES;
