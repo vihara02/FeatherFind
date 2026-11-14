@@ -10,9 +10,10 @@ Built with Expo and React Native, FeatherFind is designed for quick use outdoors
 
 ## ✨ Features
 
-- **Explore the bird catalogue** — Search by common name, scientific name, Sinhala name, or bird family.
+- **Explore the bird catalogue** — Search the local guide by common name, scientific name, Sinhala name, or bird family, with extra bird species from the free iNaturalist search API.
 - **Browse by group** — Filter the guide to endemic species or species of conservation concern.
 - **Learn about each bird** — Read identification clues, habitat and range information, diet, behavior, and interesting facts.
+- **Search more bird species online** — Home and Explore search the public iNaturalist taxonomy API and link to species details.
 - **Identify a bird from a photo** — Take a picture or choose one from your gallery to get AI-generated identification suggestions and helpful visual clues.
 - **Record sightings** — Save the bird, date and time, location, number seen, notes, and an optional photo.
 - **Use GPS in the field** — Add your current location to a sighting when location permission is available.
@@ -21,7 +22,7 @@ Built with Expo and React Native, FeatherFind is designed for quick use outdoors
 - **Make it yours** — Switch between light and dark appearance and configure your Gemini API key in Profile.
 - **Keep your field records on-device** — Sightings, favorites, and checklist data are stored locally with SQLite.
 
-> **AI photo identification:** Add a Gemini API key in **Profile → Gemini API key**. An internet connection is required, and the selected photo is sent to Google Gemini for analysis. Use a restricted key for personal testing; for a production app, route requests through a secure backend rather than distributing a private API key in a mobile app.
+> **Online bird search** uses iNaturalist's public taxonomy API and does not need an API key. Photo identification remains a separate Gemini-powered feature configured in Profile.
 
 ---
 
@@ -38,6 +39,7 @@ Built with Expo and React Native, FeatherFind is designed for quick use outdoors
 | [Expo Image Picker](https://docs.expo.dev/versions/v58.0.0/sdk/imagepicker/) | Camera capture and gallery selection |
 | [Expo Location](https://docs.expo.dev/versions/v58.0.0/sdk/location/) | Optional GPS location for sightings |
 | [Google Gemini API](https://ai.google.dev/gemini-api/docs) | AI-assisted bird photo identification |
+| [iNaturalist API](https://api.inaturalist.org/v1/docs/) | Free public bird taxonomy search |
 
 ---
 
@@ -48,6 +50,7 @@ Built with Expo and React Native, FeatherFind is designed for quick use outdoors
 - [Node.js](https://nodejs.org/) and npm
 - A phone with [Expo Go](https://expo.dev/go) for quick device testing, or an Android/iOS development environment
 - An optional Gemini API key for photo identification
+- An internet connection for online bird search
 
 ### Install and start
 
@@ -81,6 +84,10 @@ Camera, gallery, and GPS behavior should be tested on a device with the required
 4. Open **Identify bird**, take or select a photo, and tap **Identify this bird**.
 
 The app stores the key in local device preferences. Do not commit API keys to this repository.
+
+### Online bird search
+
+Bird-name searches in Home and Explore query iNaturalist's public taxonomy API after a short debounce. No API key, account, or additional configuration is needed. The bundled guide remains available if the network is unavailable.
 
 ---
 
@@ -128,6 +135,7 @@ The bundled catalogue is in [`src/data/birdsData.ts`](src/data/birdsData.ts). Bi
 - Location access is optional and used to add GPS coordinates to a sighting.
 - Photo identification sends the selected image and prompt to Google Gemini. Review Google’s privacy terms and API settings before using the feature.
 - The Gemini API key is stored in local app preferences. A key embedded in a client app should be treated as recoverable; use API restrictions and a secure server-side proxy for production deployments.
+- Bird searches send the search text to iNaturalist. Review [iNaturalist’s terms](https://www.inaturalist.org/terms) and [privacy policy](https://www.inaturalist.org/privacy).
 
 ---
 

@@ -17,6 +17,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { BirdCard } from '../components/BirdCard';
+import { BirdSearchSuggestions } from '../components/BirdSearchSuggestions';
 import { SearchBar } from '../components/SearchBar';
 import { useTheme } from '../context/ThemeContext';
 import { INITIAL_BIRDS_DATA } from '../data/birdsData';
@@ -26,6 +27,7 @@ import { ChecklistItem, getChecklist, toggleChecklistSpotted } from '../db/check
 import { getFavoriteBirds, toggleFavorite } from '../db/birdsRepo';
 import { addSighting, getBirdStats } from '../db/sightingsRepo';
 import { Bird, BirdStats } from '../types';
+import { useBirdSearch } from '../hooks/useBirdSearch';
 import { getCurrentGPSLocation } from '../services/locationService';
 import { takeBirdPhoto } from '../services/imageService';
 import { getUserPreferences, saveUserPreferences } from '../services/storageService';
@@ -71,6 +73,7 @@ function FeatherFindHome() {
   const [loadingPhoto, setLoadingPhoto] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [savingGeminiApiKey, setSavingGeminiApiKey] = useState(false);
+  const onlineSearch = useBirdSearch(query);
 
   const loadDatabaseData = useCallback(
     () => Promise.all([getBirdStats(), getFavoriteBirds()] as const),
@@ -449,10 +452,20 @@ function FeatherFindHome() {
           <View style={[styles.emptyState, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>No birds found</Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              Try a different keyword like “magpie”, “forest”, or “endemic”.
+              {query.trim().length >= 2
+                ? 'No matching species in the local guide. Check the online results below.'
+                : 'Try a different keyword like “magpie”, “forest”, or “endemic”.'}
             </Text>
           </View>
         )}
+        <BirdSearchSuggestions
+          query={query}
+          suggestions={onlineSearch.suggestions}
+          localBirds={INITIAL_BIRDS_DATA}
+          loading={onlineSearch.loading}
+          error={onlineSearch.error}
+          onRetry={onlineSearch.retry}
+        />
       </ScrollView>
 
       <Modal visible={Boolean(selectedBird)} transparent animationType="slide" onRequestClose={() => setSelectedBird(null)}>
