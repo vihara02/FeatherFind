@@ -368,32 +368,47 @@ function FeatherFindHome() {
         </ImageBackground>
 
         {birdOfTheDay && (
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel={`Bird of the day: ${birdOfTheDay.commonName}. View details.`}
-            style={[styles.dailyBirdCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => setSelectedBird(birdOfTheDay)}
-            activeOpacity={0.82}
-          >
-            <Image
-              source={BIRD_LOCAL_IMAGES[birdOfTheDay.localImageKey] ?? { uri: birdOfTheDay.imageUrl }}
-              style={styles.dailyBirdImage}
-              resizeMode="cover"
-            />
-            <View style={styles.dailyBirdContent}>
-              <Text style={[styles.dailyBirdEyebrow, { color: colors.primary }]}>BIRD OF THE DAY</Text>
-              <Text style={[styles.dailyBirdName, { color: colors.text }]} numberOfLines={1}>
-                {birdOfTheDay.commonName}
-              </Text>
-              <Text style={[styles.dailyBirdScientific, { color: colors.textSecondary }]} numberOfLines={1}>
-                {birdOfTheDay.scientificName}
-              </Text>
-              <Text style={[styles.dailyBirdFact, { color: colors.textSecondary }]} numberOfLines={2}>
-                {birdOfTheDay.interestingFacts[0] ?? birdOfTheDay.description}
-              </Text>
-            </View>
-            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
-          </TouchableOpacity>
+          <View style={[styles.dailyBirdCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`Bird of the day: ${birdOfTheDay.commonName}. View details.`}
+              style={styles.dailyBirdMain}
+              onPress={() => setSelectedBird(birdOfTheDay)}
+              activeOpacity={0.82}
+            >
+              <Image
+                source={BIRD_LOCAL_IMAGES[birdOfTheDay.localImageKey] ?? { uri: birdOfTheDay.imageUrl }}
+                style={styles.dailyBirdImage}
+                resizeMode="cover"
+              />
+              <View style={styles.dailyBirdContent}>
+                <Text style={[styles.dailyBirdEyebrow, { color: colors.primary }]}>BIRD OF THE DAY</Text>
+                <Text style={[styles.dailyBirdName, { color: colors.text }]} numberOfLines={1}>
+                  {birdOfTheDay.commonName}
+                </Text>
+                <Text style={[styles.dailyBirdScientific, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {birdOfTheDay.scientificName}
+                </Text>
+                <Text style={[styles.dailyBirdFact, { color: colors.textSecondary }]} numberOfLines={2}>
+                  {birdOfTheDay.interestingFacts[0] ?? birdOfTheDay.description}
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`${favorites[birdOfTheDay.id] ? 'Remove' : 'Add'} ${birdOfTheDay.commonName} ${favorites[birdOfTheDay.id] ? 'from' : 'to'} favorites`}
+              style={styles.dailyBirdFavorite}
+              onPress={() => void handleToggleFavorite(birdOfTheDay.id)}
+              hitSlop={8}
+            >
+              <MaterialCommunityIcons
+                name={favorites[birdOfTheDay.id] ? 'heart' : 'heart-outline'}
+                size={21}
+                color={favorites[birdOfTheDay.id] ? '#D93838' : colors.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
         )}
 
         <View style={styles.statsRow}>
@@ -729,7 +744,9 @@ const styles = StyleSheet.create({
   featurePrimary: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 13, backgroundColor: '#F5D99A', paddingHorizontal: 13 },
   featurePrimaryText: { color: '#183D2A', fontSize: 13, fontWeight: '800' },
   featureCamera: { width: 40, height: 40, borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)', borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.14)' },
-  dailyBirdCard: { minHeight: 112, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 18, padding: 12, marginBottom: 18 },
+  dailyBirdCard: { minHeight: 112, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 18, padding: 12, marginBottom: 18 },
+  dailyBirdMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dailyBirdFavorite: { width: 36, height: 40, alignItems: 'center', justifyContent: 'center' },
   dailyBirdImage: { width: 84, height: 84, borderRadius: 13, backgroundColor: '#E6ECE8' },
   dailyBirdContent: { flex: 1 },
   dailyBirdEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 0.9, marginBottom: 4 },
