@@ -47,6 +47,14 @@ function localDateTime() {
   };
 }
 
+function getBirdOfTheDay(date = new Date()): Bird | null {
+  const birdCount = INITIAL_BIRDS_DATA.length;
+  if (birdCount === 0) return null;
+  const dayNumber = Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000);
+  const index = ((dayNumber % birdCount) + birdCount) % birdCount;
+  return INITIAL_BIRDS_DATA[index];
+}
+
 function FeatherFindHome() {
   const { colors, isDark, setThemeMode } = useTheme();
   const [query, setQuery] = useState('');
@@ -68,6 +76,7 @@ function FeatherFindHome() {
   const [loadingChecklist, setLoadingChecklist] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [loadingPhoto, setLoadingPhoto] = useState(false);
+  const birdOfTheDay = getBirdOfTheDay();
 
   const loadDatabaseData = useCallback(
     () => Promise.all([getBirdStats(), getFavoriteBirds()] as const),
@@ -357,6 +366,35 @@ function FeatherFindHome() {
             </View>
           </View>
         </ImageBackground>
+
+        {birdOfTheDay && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={`Bird of the day: ${birdOfTheDay.commonName}. View details.`}
+            style={[styles.dailyBirdCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => setSelectedBird(birdOfTheDay)}
+            activeOpacity={0.82}
+          >
+            <Image
+              source={BIRD_LOCAL_IMAGES[birdOfTheDay.localImageKey] ?? { uri: birdOfTheDay.imageUrl }}
+              style={styles.dailyBirdImage}
+              resizeMode="cover"
+            />
+            <View style={styles.dailyBirdContent}>
+              <Text style={[styles.dailyBirdEyebrow, { color: colors.primary }]}>BIRD OF THE DAY</Text>
+              <Text style={[styles.dailyBirdName, { color: colors.text }]} numberOfLines={1}>
+                {birdOfTheDay.commonName}
+              </Text>
+              <Text style={[styles.dailyBirdScientific, { color: colors.textSecondary }]} numberOfLines={1}>
+                {birdOfTheDay.scientificName}
+              </Text>
+              <Text style={[styles.dailyBirdFact, { color: colors.textSecondary }]} numberOfLines={2}>
+                {birdOfTheDay.interestingFacts[0] ?? birdOfTheDay.description}
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
 
         <View style={styles.statsRow}>
           {[
@@ -691,6 +729,13 @@ const styles = StyleSheet.create({
   featurePrimary: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 13, backgroundColor: '#F5D99A', paddingHorizontal: 13 },
   featurePrimaryText: { color: '#183D2A', fontSize: 13, fontWeight: '800' },
   featureCamera: { width: 40, height: 40, borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)', borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.14)' },
+  dailyBirdCard: { minHeight: 112, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 18, padding: 12, marginBottom: 18 },
+  dailyBirdImage: { width: 84, height: 84, borderRadius: 13, backgroundColor: '#E6ECE8' },
+  dailyBirdContent: { flex: 1 },
+  dailyBirdEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 0.9, marginBottom: 4 },
+  dailyBirdName: { fontSize: 15, fontWeight: '800' },
+  dailyBirdScientific: { fontSize: 12, fontStyle: 'italic', marginTop: 1, marginBottom: 4 },
+  dailyBirdFact: { fontSize: 12, lineHeight: 17 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 18, gap: 8 },
   statCard: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 5, alignItems: 'center' },
   statValue: { fontSize: 21, fontWeight: '800', marginBottom: 2 },

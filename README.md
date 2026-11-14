@@ -13,6 +13,7 @@ Built with Expo and React Native, FeatherFind is designed for quick use outdoors
 - **Explore the bird catalogue** — Search by common name, scientific name, Sinhala name, or bird family.
 - **Browse by group** — Filter the guide to endemic species or species of conservation concern.
 - **Learn about each bird** — Read identification clues, habitat and range information, diet, behavior, and interesting facts.
+- **Meet the bird of the day** — Discover a different catalogue species each day and open its details with one tap.
 - **Identify a bird from a photo** — Take a picture or choose one from your gallery to get free iNaturalist computer-vision suggestions, matched with the local bird guide when possible.
 - **Record sightings** — Save the bird, date and time, location, number seen, notes, and an optional photo.
 - **Use GPS in the field** — Add your current location to a sighting when location permission is available.
