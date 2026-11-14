@@ -23,6 +23,16 @@ Built with Expo and React Native, FeatherFind is designed for quick use outdoors
 - **Make it yours** — Switch between light and dark appearance.
 - **Keep your field records on-device** — Sightings, favorites, and checklist data are stored locally with SQLite.
 
+## 📱 App screenshots
+
+Captured in a mobile viewport:
+
+<p align="center">
+  <img src="./screenshots/home.png" alt="FeatherFind home screen on mobile" width="250" />
+  <img src="./screenshots/explore.png" alt="FeatherFind Explore screen on mobile" width="250" />
+  <img src="./screenshots/identify.png" alt="FeatherFind bird identification screen on mobile" width="250" />
+</p>
+
 > **Photo identification:** An internet connection and a deployed backend are required. The selected photo is sent to Groq's vision API through the Cloudflare Worker. The Groq API key is stored only as a Cloudflare secret, never in the app.
 > **Online bird search** uses iNaturalist's public taxonomy API and does not need an API key.
 

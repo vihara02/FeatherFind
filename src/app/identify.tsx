@@ -75,7 +75,7 @@ export default function IdentifyScreen() {
           </View>
           <Text style={[styles.title, { color: colors.textInverse }]}>Who’s that bird?</Text>
           <Text style={[styles.subtitle, { color: colors.textInverse }]}>
-            Take or choose a clear photo. iNaturalist will suggest likely bird species.
+            Take or choose a clear photo. Our vision model will suggest likely bird species.
           </Text>
         </View>
 
