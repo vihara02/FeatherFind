@@ -389,6 +389,12 @@ function FeatherFindHome() {
                 <Text style={[styles.dailyBirdScientific, { color: colors.textSecondary }]} numberOfLines={1}>
                   {birdOfTheDay.scientificName}
                 </Text>
+                {birdOfTheDay.isEndemic && (
+                  <View style={[styles.dailyBirdTag, { backgroundColor: colors.sageSubtle }]}>
+                    <MaterialCommunityIcons name="leaf" size={12} color={colors.primary} />
+                    <Text style={[styles.dailyBirdTagText, { color: colors.primary }]}>Sri Lankan endemic</Text>
+                  </View>
+                )}
                 <Text style={[styles.dailyBirdFact, { color: colors.textSecondary }]} numberOfLines={2}>
                   {birdOfTheDay.interestingFacts[0] ?? birdOfTheDay.description}
                 </Text>
@@ -752,6 +758,8 @@ const styles = StyleSheet.create({
   dailyBirdEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 0.9, marginBottom: 4 },
   dailyBirdName: { fontSize: 15, fontWeight: '800' },
   dailyBirdScientific: { fontSize: 12, fontStyle: 'italic', marginTop: 1, marginBottom: 4 },
+  dailyBirdTag: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, marginBottom: 4 },
+  dailyBirdTagText: { fontSize: 10, fontWeight: '700' },
   dailyBirdFact: { fontSize: 12, lineHeight: 17 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 18, gap: 8 },
   statCard: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 5, alignItems: 'center' },
