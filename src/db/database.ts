@@ -94,47 +94,53 @@ async function initSchema(db: SQLite.SQLiteDatabase): Promise<void> {
 
   // Check if birds table is seeded
   const countRow = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM birds');
-  if (!countRow || countRow.count === 0) {
+  const shouldSeedSamples = !countRow || countRow.count === 0;
+  if (shouldSeedSamples) {
     console.log('Seeding initial verified Sri Lankan bird species into SQLite database...');
-    for (const bird of INITIAL_BIRDS_DATA) {
-      await db.runAsync(
-        `INSERT OR REPLACE INTO birds (
-          id, common_name, scientific_name, sinhala_name, tamil_name,
-          family, order_name, description, physical_characteristics, average_size,
-          habitat, habitat_category, distribution_sl, diet, behavior,
-          conservation_status, iucn_code, identification_keys, interesting_facts,
-          similar_species, image_url, local_image_key, is_endemic
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          bird.id,
-          bird.commonName,
-          bird.scientificName,
-          bird.sinhalaName,
-          bird.tamilName,
-          bird.family,
-          bird.orderName,
-          bird.description,
-          bird.physicalCharacteristics,
-          bird.averageSize,
-          bird.habitat,
-          bird.habitatCategory,
-          bird.distributionInSriLanka,
-          bird.diet,
-          bird.behavior,
-          bird.conservationStatus,
-          bird.iucnCode,
-          JSON.stringify(bird.identificationCharacteristics),
-          JSON.stringify(bird.interestingFacts),
-          JSON.stringify(bird.similarSpecies),
-          bird.imageUrl,
-          bird.localImageKey,
-          bird.isEndemic ? 1 : 0,
-        ]
-      );
-    }
-
+  }
+  await seedBirdCatalog(db);
+  if (shouldSeedSamples) {
     // Seed default sample sightings so the journal, timeline, and stats have realistic data right away
     await seedSampleSightings(db);
+  }
+}
+
+async function seedBirdCatalog(db: SQLite.SQLiteDatabase): Promise<void> {
+  for (const bird of INITIAL_BIRDS_DATA) {
+    await db.runAsync(
+      `INSERT OR IGNORE INTO birds (
+        id, common_name, scientific_name, sinhala_name, tamil_name,
+        family, order_name, description, physical_characteristics, average_size,
+        habitat, habitat_category, distribution_sl, diet, behavior,
+        conservation_status, iucn_code, identification_keys, interesting_facts,
+        similar_species, image_url, local_image_key, is_endemic
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        bird.id,
+        bird.commonName,
+        bird.scientificName,
+        bird.sinhalaName,
+        bird.tamilName,
+        bird.family,
+        bird.orderName,
+        bird.description,
+        bird.physicalCharacteristics,
+        bird.averageSize,
+        bird.habitat,
+        bird.habitatCategory,
+        bird.distributionInSriLanka,
+        bird.diet,
+        bird.behavior,
+        bird.conservationStatus,
+        bird.iucnCode,
+        JSON.stringify(bird.identificationCharacteristics),
+        JSON.stringify(bird.interestingFacts),
+        JSON.stringify(bird.similarSpecies),
+        bird.imageUrl,
+        bird.localImageKey,
+        bird.isEndemic ? 1 : 0,
+      ]
+    );
   }
 }
 

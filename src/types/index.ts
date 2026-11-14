@@ -104,6 +104,7 @@ export interface AIIdentificationMatch {
   scientificName: string;
   confidence: number; // 0 to 1
   matchingBird?: Bird;
+  description: string;
   identifyingCharacteristics: string[];
   habitatInfo: string;
   similarSpecies: string[];

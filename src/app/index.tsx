@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Image,
+  ImageBackground,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -14,9 +15,10 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { BirdCard } from '../components/BirdCard';
 import { SearchBar } from '../components/SearchBar';
-import { ThemeProvider, useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { INITIAL_BIRDS_DATA } from '../data/birdsData';
 import { BIRD_LOCAL_IMAGES } from '../data/birdImages';
 import { SRI_LANKA_HABITATS } from '../constants/Habitats';
@@ -26,12 +28,13 @@ import { addSighting, getBirdStats } from '../db/sightingsRepo';
 import { Bird, BirdStats } from '../types';
 import { getCurrentGPSLocation } from '../services/locationService';
 import { takeBirdPhoto } from '../services/imageService';
+import { getUserPreferences, saveUserPreferences } from '../services/storageService';
 
 const quickActions = [
   { label: 'Explore', icon: 'binoculars', color: '#1F6B52' },
+  { label: 'Identify bird', icon: 'creation', color: '#6A5AA6' },
   { label: 'Log Sighting', icon: 'camera-plus', color: '#B56A1D' },
   { label: 'Checklist', icon: 'clipboard-check-outline', color: '#3B6F8C' },
-  { label: 'Profile', icon: 'account-circle', color: '#5C4B8A' },
 ] as const;
 
 type ModalName = 'sighting' | 'checklist' | 'profile' | null;
@@ -66,6 +69,8 @@ function FeatherFindHome() {
   const [loadingChecklist, setLoadingChecklist] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [loadingPhoto, setLoadingPhoto] = useState(false);
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [savingGeminiApiKey, setSavingGeminiApiKey] = useState(false);
 
   const loadDatabaseData = useCallback(
     () => Promise.all([getBirdStats(), getFavoriteBirds()] as const),
@@ -140,8 +145,11 @@ function FeatherFindHome() {
   const handleQuickActionPress = (label: string) => {
     setActiveAction(label);
     if (label === 'Explore') {
-      setShowAll(true);
-      setQuery('');
+      router.push('/explore');
+      return;
+    }
+    if (label === 'Identify bird') {
+      router.push('/identify');
       return;
     }
     if (label === 'Log Sighting') {
@@ -157,7 +165,28 @@ function FeatherFindHome() {
         .finally(() => setLoadingChecklist(false));
       return;
     }
-    setActiveModal('profile');
+  };
+
+  const openProfile = async () => {
+    try {
+      const preferences = await getUserPreferences();
+      setGeminiApiKey(preferences.geminiApiKey ?? '');
+      setActiveModal('profile');
+    } catch (error) {
+      showError('Could not open profile settings', error);
+    }
+  };
+
+  const handleSaveGeminiApiKey = async () => {
+    setSavingGeminiApiKey(true);
+    try {
+      await saveUserPreferences({ geminiApiKey: geminiApiKey.trim() });
+      Alert.alert('Settings saved', geminiApiKey.trim() ? 'Gemini is ready to identify bird photos.' : 'Gemini API key removed.');
+    } catch (error) {
+      showError('Could not save Gemini settings', error);
+    } finally {
+      setSavingGeminiApiKey(false);
+    }
   };
 
   const handleToggleFavorite = async (birdId: string) => {
@@ -295,6 +324,15 @@ function FeatherFindHome() {
             </View>
             <TouchableOpacity
               accessibilityRole="button"
+              accessibilityLabel="Open profile settings"
+              style={[styles.themeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => void openProfile()}
+              activeOpacity={0.75}
+            >
+              <MaterialCommunityIcons name="account-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityRole="button"
               accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
               style={[styles.themeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={handleThemeToggle}
@@ -308,6 +346,42 @@ function FeatherFindHome() {
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Discover endemic birds, habitats, and your field sightings in one place.
         </Text>
+
+        <ImageBackground
+          source={BIRD_LOCAL_IMAGES.sl_blue_magpie}
+          style={styles.featureCard}
+          imageStyle={styles.featureImage}
+          resizeMode="cover"
+        >
+          <View style={styles.featureScrim}>
+            <View style={styles.featureBadge}>
+              <MaterialCommunityIcons name="leaf" size={13} color="#F6D68C" />
+              <Text style={styles.featureBadgeText}>YOUR FIELD GUIDE</Text>
+            </View>
+            <Text style={styles.featureTitle}>Find your next{'\n'}feathered friend.</Text>
+            <Text style={styles.featureDescription}>Explore 36+ birds and learn what makes each one special.</Text>
+            <View style={styles.featureActions}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                style={styles.featurePrimary}
+                onPress={() => router.push('/explore')}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.featurePrimaryText}>Explore birds</Text>
+                <MaterialCommunityIcons name="arrow-right" size={17} color="#183D2A" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Identify a bird from a photo"
+                style={styles.featureCamera}
+                onPress={() => router.push('/identify')}
+                activeOpacity={0.85}
+              >
+                <MaterialCommunityIcons name="camera" size={19} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ImageBackground>
 
         <View style={styles.statsRow}>
           {[
@@ -565,28 +639,54 @@ function FeatherFindHome() {
                 <MaterialCommunityIcons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <MaterialCommunityIcons name="account-circle" size={42} color={colors.primary} />
-              <View style={styles.profileInfo}>
-                <Text style={[styles.selectedBirdName, { color: colors.text }]}>Sri Lankan Explorer</Text>
-                <Text style={[styles.helperText, { color: colors.textSecondary }]}>Your birding activity is saved on this device.</Text>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <MaterialCommunityIcons name="account-circle" size={42} color={colors.primary} />
+                <View style={styles.profileInfo}>
+                  <Text style={[styles.selectedBirdName, { color: colors.text }]}>Sri Lankan Explorer</Text>
+                  <Text style={[styles.helperText, { color: colors.textSecondary }]}>Your birding activity is saved on this device.</Text>
+                </View>
               </View>
-            </View>
-            <View style={[styles.profileStats, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <ProfileStat label="Sightings" value={birdStats?.totalSightings ?? 0} colors={colors} />
-              <ProfileStat label="Species" value={birdStats?.uniqueSpeciesCount ?? 0} colors={colors} />
-              <ProfileStat label="Favorites" value={Object.values(favorites).filter(Boolean).length} colors={colors} />
-            </View>
-            <TouchableOpacity style={[styles.themeRow, { borderColor: colors.border }]} onPress={() => void handleThemeToggle()}>
-              <View style={styles.themeRowText}>
-                <MaterialCommunityIcons name={isDark ? 'moon-waning-crescent' : 'white-balance-sunny'} size={21} color={colors.primary} />
-                <Text style={[styles.birdPickerText, { color: colors.text }]}>{isDark ? 'Dark appearance' : 'Light appearance'}</Text>
+              <View style={[styles.profileStats, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <ProfileStat label="Sightings" value={birdStats?.totalSightings ?? 0} colors={colors} />
+                <ProfileStat label="Species" value={birdStats?.uniqueSpeciesCount ?? 0} colors={colors} />
+                <ProfileStat label="Favorites" value={Object.values(favorites).filter(Boolean).length} colors={colors} />
               </View>
-              <Text style={[styles.sectionLink, { color: colors.primary }]}>Switch</Text>
-            </TouchableOpacity>
-            <Text style={[styles.helperText, { color: colors.textSecondary }]}>
-              Your appearance preference is saved and used next time you open the app.
-            </Text>
+              <TouchableOpacity style={[styles.themeRow, { borderColor: colors.border }]} onPress={() => void handleThemeToggle()}>
+                <View style={styles.themeRowText}>
+                  <MaterialCommunityIcons name={isDark ? 'moon-waning-crescent' : 'white-balance-sunny'} size={21} color={colors.primary} />
+                  <Text style={[styles.birdPickerText, { color: colors.text }]}>{isDark ? 'Dark appearance' : 'Light appearance'}</Text>
+                </View>
+                <Text style={[styles.sectionLink, { color: colors.primary }]}>Switch</Text>
+              </TouchableOpacity>
+              <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+                Your appearance preference is saved and used next time you open the app.
+              </Text>
+
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Gemini API key</Text>
+              <TextInput
+                style={[styles.input, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
+                value={geminiApiKey}
+                onChangeText={setGeminiApiKey}
+                placeholder="Paste your Gemini API key"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+              />
+              <Text style={[styles.helperText, styles.apiKeyHint, { color: colors.textSecondary }]}>
+                Bird photos are sent to Google Gemini for identification. The key is stored on this device; restrict it in Google AI Studio and don’t use a production billing key here.
+              </Text>
+              <TouchableOpacity
+                style={[styles.primaryButton, styles.saveButton, { backgroundColor: colors.primary, opacity: savingGeminiApiKey ? 0.65 : 1 }]}
+                onPress={() => void handleSaveGeminiApiKey()}
+                disabled={savingGeminiApiKey}
+              >
+                <Text style={[styles.primaryButtonText, { color: colors.textInverse }]}>
+                  {savingGeminiApiKey ? 'Saving…' : 'Save AI settings'}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -613,11 +713,7 @@ function ProfileStat({ label, value, colors }: { label: string; value: number; c
 }
 
 export default function Page() {
-  return (
-    <ThemeProvider>
-      <FeatherFindHome />
-    </ThemeProvider>
-  );
+  return <FeatherFindHome />;
 }
 
 const styles = StyleSheet.create({
@@ -625,13 +721,24 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 40 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
   headerText: { flex: 1 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 8 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 8 },
   eyebrow: { fontSize: 12, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 },
   title: { fontSize: 30, fontWeight: '800', letterSpacing: -0.7 },
   pill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 8 },
   pillText: { fontSize: 12, fontWeight: '700' },
   themeButton: { width: 40, height: 40, borderWidth: 1, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  subtitle: { fontSize: 15, lineHeight: 22, marginBottom: 18 },
+  subtitle: { fontSize: 15, lineHeight: 22, marginBottom: 16 },
+  featureCard: { height: 245, borderRadius: 22, overflow: 'hidden', marginBottom: 18, backgroundColor: '#183D2A' },
+  featureImage: { borderRadius: 22 },
+  featureScrim: { flex: 1, justifyContent: 'flex-end', padding: 18, backgroundColor: 'rgba(11, 25, 16, 0.48)' },
+  featureBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: 'rgba(10, 25, 16, 0.58)', marginBottom: 10 },
+  featureBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.9 },
+  featureTitle: { color: '#FFFFFF', fontSize: 25, lineHeight: 29, fontWeight: '800', letterSpacing: -0.3 },
+  featureDescription: { color: '#F1F4F1', fontSize: 12, lineHeight: 18, marginTop: 7, marginBottom: 12 },
+  featureActions: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  featurePrimary: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 13, backgroundColor: '#F5D99A', paddingHorizontal: 13 },
+  featurePrimaryText: { color: '#183D2A', fontSize: 13, fontWeight: '800' },
+  featureCamera: { width: 40, height: 40, borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)', borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.14)' },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 18, gap: 8 },
   statCard: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 5, alignItems: 'center' },
   statValue: { fontSize: 21, fontWeight: '800', marginBottom: 2 },
@@ -680,6 +787,7 @@ const styles = StyleSheet.create({
   checklistText: { flex: 1, gap: 2 },
   profileCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
   profileInfo: { flex: 1, gap: 4 },
+  apiKeyHint: { marginTop: 8 },
   profileStats: { flexDirection: 'row', justifyContent: 'space-around', padding: 14, borderRadius: 14, borderWidth: 1, marginTop: 12, marginBottom: 8 },
   profileStat: { alignItems: 'center', gap: 3 },
   profileStatValue: { fontSize: 20, fontWeight: '800' },
